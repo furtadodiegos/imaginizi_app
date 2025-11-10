@@ -1,0 +1,33 @@
+<svg
+  width="200"
+  height="200"
+  viewBox="0 0 200 200"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    d="
+      M 100,5
+      L 120,40
+      L 160,35
+      L 155,75
+      L 195,100
+      L 150,120
+      L 165,160
+      L 125,150
+      L 100,195
+      L 75,150
+      L 35,160
+      L 50,120
+      L 5,100
+      L 45,75
+      L 40,35
+      L 80,40
+      Z
+    "
+    fill="none"
+    stroke="currentColor"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

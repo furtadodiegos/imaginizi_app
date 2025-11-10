@@ -1,0 +1,27 @@
+<svg
+  width="400"
+  height="350"
+  viewBox="0 0 200 190"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Balão em formato de coração com a base arredondada -->
+  <path
+    d="
+      M100 170
+      C 75 165, 45 145, 30 120
+      C 10 85, 20 45, 50 30
+      C 70 20, 90 25, 100 40
+      C 110 25, 130 20, 150 30
+      C 180 45, 190 85, 170 120
+      C 155 145, 125 165, 100 170
+      C 90 172, 80 175, 70 175
+      C 80 182, 90 185, 100 185
+      C 110 185, 120 182, 130 175
+      "
+    fill="none"
+    stroke="currentColor"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
