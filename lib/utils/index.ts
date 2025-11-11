@@ -1,17 +1,15 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export const waitFor = (el: HTMLVideoElement, ev: string) =>
-  new Promise<void>((resolve) =>
-    el.addEventListener(ev, () => resolve(), { once: true })
-  );
+  new Promise<void>((resolve) => el.addEventListener(ev, () => resolve(), { once: true }));
 
 export function dataURLtoFile(dataurl: string, filename: string): File | null {
-  const arr = dataurl.split(",");
+  const arr = dataurl.split(',');
 
   if (arr.length < 2) {
     return null;

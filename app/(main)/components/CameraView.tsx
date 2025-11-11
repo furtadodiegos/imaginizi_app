@@ -2,9 +2,11 @@
 
 import { Loader2, X } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect, useRef } from 'react';
 
 import { Overlay } from '@/components/Overlay';
 import { Button } from '@/components/ui/button';
+import { useVisionGuidance } from '@/hooks/useCameraGuidance';
 import { cn } from '@/lib/utils';
 
 type CameraViewProps = {
@@ -34,6 +36,126 @@ export default function CameraView({
   retakePhoto,
   generateImage,
 }: CameraViewProps) {
+  const { guidance, start, stop } = useVisionGuidance();
+
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+
+  // quando o vídeo estiver pronto (metadata loaded), inicia o guidance
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const startNow = () => {
+      const W = v.videoWidth || 640;
+      const H = v.videoHeight || 480;
+
+      v.width = W;
+      v.height = H;
+
+      start({
+        source: v,
+        width: W,
+        height: H,
+        fps: 12,
+        cascadesBase: '/libs/cascades',
+        opencvBase: '/libs/opencv',
+      });
+    };
+
+    const onLoadedMeta = () => {
+      v.play()
+        .then(() => {
+          if (v.videoWidth > 0 && v.videoHeight > 0) startNow();
+        })
+        .catch(console.warn);
+    };
+
+    const onPlaying = () => {
+      if (v.videoWidth > 0 && v.videoHeight > 0) startNow();
+    };
+
+    v.addEventListener('loadedmetadata', onLoadedMeta);
+    v.addEventListener('playing', onPlaying);
+
+    if (v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0) {
+      startNow();
+    }
+
+    return () => {
+      v.removeEventListener('loadedmetadata', onLoadedMeta);
+
+      v.removeEventListener('playing', onPlaying);
+
+      stop();
+    };
+  }, [start, stop, videoRef, cameraStreaming]);
+
+  // desenhar overlay quando guidance mudar
+  useEffect(() => {
+    const c = overlayRef.current;
+    const v = videoRef.current;
+
+    if (!c || !v) return;
+
+    const W = (c.width = v.width);
+    const H = (c.height = v.height);
+
+    const ctx = c.getContext('2d')!;
+
+    ctx.clearRect(0, 0, W, H);
+
+    if (!guidance) return;
+
+    // semáforo
+    const color = guidance.level === 'GOOD' ? '#22c55e' : guidance.level === 'OK' ? '#eab308' : '#ef4444';
+
+    // oval central (zona alvo)
+    // ctx.save();
+    // ctx.strokeStyle = color;
+    // ctx.lineWidth = 2;
+    // ctx.beginPath();
+    // ctx.ellipse(W / 2, H / 2, W * 0.25, H * 0.35, 0, 0, Math.PI * 2);
+    // ctx.stroke();
+    // ctx.restore();
+
+    // face/olhos/boca
+    const drawBox = (b?: { x: number; y: number; w: number; h: number }) => {
+      if (!b) return;
+
+      ctx.strokeStyle = color;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+    };
+
+    drawBox(guidance.face);
+    drawBox(guidance.leftEye);
+    drawBox(guidance.rightEye);
+    drawBox(guidance.mouth);
+
+    // linha dos olhos (se ambos presentes)
+    if (guidance.leftEye && guidance.rightEye) {
+      const le = guidance.leftEye;
+      const re = guidance.rightEye;
+
+      const lcx = le.x + le.w / 2,
+        lcy = le.y + le.h / 2;
+
+      const rcx = re.x + re.w / 2,
+        rcy = re.y + re.h / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(lcx, lcy);
+      ctx.lineTo(rcx, rcy);
+      ctx.stroke();
+    }
+
+    // texto
+    ctx.fillStyle = color;
+    ctx.font = '16px system-ui, -apple-system, sans-serif';
+    ctx.fillText(guidance.text ?? '', 12, H - 16);
+  }, [guidance, videoRef]);
+
+  const canCapture = !!guidance?.canCapture;
+
   return (
     <div
       className={cn(
@@ -56,6 +178,17 @@ export default function CameraView({
           display: imagePreview ? 'none' : 'block',
         }}
       />
+
+      <canvas
+        ref={overlayRef}
+        className="absolute z-12 inset-0 w-full h-full object-cover top-0 left-0 pointer-events-none"
+      />
+
+      <button
+        disabled={!canCapture}
+        className="absolute bottom-8 left-0 right-0 z-11 flex items-center justify-center gap-x-8">
+        Agora está bom
+      </button>
 
       <canvas
         ref={photoCanvasRef}
