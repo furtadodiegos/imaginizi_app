@@ -1,6 +1,9 @@
 import { GoogleGenAI, Part } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAuthSession } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
 export const runtime = 'nodejs';
 
 const client = new GoogleGenAI({
@@ -9,6 +12,19 @@ const client = new GoogleGenAI({
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getAuthSession();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (user.quota <= 0) {
+      return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('image') as File | null;
     const prompt = formData.get('prompt') as string | null;
@@ -58,6 +74,14 @@ Não mude traços principais do rosto, apenas roupa, cenário e estilo.
 
     const base64 = partWithImage.inlineData.data as string;
     const mimeType = partWithImage.inlineData.mimeType || 'image/png';
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        used: { increment: 1 },
+        quota: { decrement: 1 },
+      },
+    });
 
     return NextResponse.json({
       image: `data:${mimeType};base64,${base64}`,

@@ -1,9 +1,10 @@
 'use client';
 
-import { Loader2, X } from 'lucide-react';
+import { Loader2, RefreshCcw, X } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { AvatarList } from '@/app/(main)/components/AvatarList';
 import { Overlay } from '@/components/Overlay';
 import { Button } from '@/components/ui/button';
 import { useVisionGuidance } from '@/hooks/useCameraGuidance';
@@ -20,7 +21,7 @@ type CameraViewProps = {
   closeCamera: () => void;
   takePhoto: () => Promise<void>;
   retakePhoto: () => void;
-  generateImage: (imagePreview: string) => Promise<void>;
+  generateImage: (imagePreview: string, prompt: string) => Promise<void>;
 };
 
 export default function CameraView({
@@ -36,6 +37,8 @@ export default function CameraView({
   retakePhoto,
   generateImage,
 }: CameraViewProps) {
+  const [prompt, setPrompt] = useState('');
+
   const { guidance, start, stop } = useVisionGuidance();
 
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -140,6 +143,10 @@ export default function CameraView({
     // ctx.fillText(guidance.text ?? '', 12, H - 16);
   }, [guidance, videoRef]);
 
+  useEffect(() => {
+    if (imagePreview) stop();
+  }, [imagePreview, stop]);
+
   return (
     <div
       className={cn(
@@ -149,6 +156,12 @@ export default function CameraView({
       <Button className="absolute top-4 right-4 z-20 h-10 w-10 rounded-full p-2" onClick={closeCamera}>
         <X className="h-6 w-6" />
       </Button>
+
+      {imagePreview && (
+        <Button className="absolute top-16 right-4 z-20 h-10 w-10 rounded-full p-2" onClick={retakePhoto}>
+          <RefreshCcw className="h-6 w-6" />
+        </Button>
+      )}
 
       <video
         ref={videoRef}
@@ -165,7 +178,7 @@ export default function CameraView({
 
       <canvas
         ref={overlayRef}
-        className="absolute z-12 inset-0 w-full h-full object-cover top-0 left-0 pointer-events-none"
+        className={cn('absolute z-12 inset-0 w-full h-full object-cover top-0 left-0 pointer-events-none')}
       />
 
       <canvas
@@ -173,19 +186,26 @@ export default function CameraView({
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: imagePreview ? 'block' : 'none' }}
       />
 
-      <div className="absolute bottom-8 left-0 right-0 z-11 flex items-center justify-center gap-x-8">
+      <div
+        className={cn(
+          'absolute bottom-8 left-0 right-0 z-11 flex items-center justify-center gap-x-8',
+          imagePreview ? 'bottom-0 bg-black/90 backdrop-blur-sm' : 'bottom-8',
+        )}>
         {imagePreview ? (
-          <>
-            <Button onClick={retakePhoto} variant="outline" className="rounded-full px-6 py-2 text-lg">
-              Tirar Novamente
-            </Button>
-
-            <Button className="rounded-full px-6 py-2 text-lg" onClick={() => generateImage(imagePreview)}>
-              Usar Foto
-            </Button>
+          <div className="w-full max-w-md mx-4 p-2 pb-8 pl-12">
+            <AvatarList onSelect={(p) => setPrompt(p)} />
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
-          </>
+
+            {prompt && (
+              <div className="flex items-center justify-end">
+                <Button
+                  onClick={() => generateImage(imagePreview, prompt)}
+                  variant="link"
+                  className="text-white text-lg underline font-bold">{`Let's Imaginzi -->`}</Button>
+              </div>
+            )}
+          </div>
         ) : (
           <Button
             onClick={takePhoto}
@@ -215,3 +235,36 @@ export default function CameraView({
     </div>
   );
 }
+
+// Ideas
+// {/* <form className="w-full max-w-md mx-4 p-2 pb-8">
+//   <FieldGroup>
+//     <FieldSet>
+//       <FieldLegend className="text-start text-lg font-bold text-white">Nice Picture</FieldLegend>
+//       <FieldDescription className="text-start text-sm font-bold text-white/50">
+//         Now, which character you want to be?
+//       </FieldDescription>
+
+//       <FieldGroup>
+//         <Field>
+//           <Input id="prompt" placeholder="Buzz Lightyear from Toy Story 4" required />
+//         </Field>
+
+//         <Button
+//           className="rounded-full absolute right-6 bottom-[33px] bg-transparent"
+//           onClick={() => generateImage(imagePreview)}>
+//           <CameraIcon className="size-6" />
+//         </Button>
+//       </FieldGroup>
+//     </FieldSet>
+//   </FieldGroup>
+// </form>;
+// {
+//   /* <Button onClick={retakePhoto} variant="outline" className="rounded-full px-6 py-2 text-lg">
+//               Tirar Novamente
+//             </Button>
+
+//             <Button className="rounded-full px-6 py-2 text-lg" onClick={() => generateImage(imagePreview)}>
+//               Usar Foto
+//             </Button> */
+// // } */}

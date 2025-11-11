@@ -5,8 +5,6 @@ import { dataURLtoFile } from '@/lib/utils';
 export const useMain = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [prompt /*, setPrompt */] = useState('marvel spider man from the movie spiderman into the spider verse');
-  // const [prompt, setPrompt] = useState('buzz lightyear from toy story');
   const [generatedImage, setGeneratedImage] = useState('');
 
   const onResetState = () => {
@@ -15,12 +13,7 @@ export const useMain = () => {
     setGeneratedImage('');
   };
 
-  const generateImage = async (imagePreview: string) => {
-    if (!imagePreview || !prompt) {
-      setError('Por favor, tire uma foto e insira um prompt.');
-      return;
-    }
-
+  const generateImage = async (imagePreview: string, prompt: string) => {
     setIsLoading(true);
     setError('');
 

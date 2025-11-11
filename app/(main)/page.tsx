@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { signIn, useSession } from 'next-auth/react';
 import { useCallback, useEffect } from 'react';
 
 import { useMain } from '@/app/(main)/hooks';
@@ -20,6 +21,8 @@ const CameraView = dynamic(() => import('./components/CameraView'), {
 const OVERFLOW_HIDDEN = 'overflow-hidden';
 
 export default function Home() {
+  const { data: session } = useSession();
+
   const { error, isLoading, generatedImage, generateImage, onResetState } = useMain();
 
   const {
@@ -36,11 +39,18 @@ export default function Home() {
   } = useCamera();
 
   const onRequestCamera = useCallback(async () => {
-    onResetState();
+    try {
+      if (!session) {
+        await signIn('google');
+        return;
+      }
 
-    // TODO: add the login before request the camera
-    requestCamera();
-  }, [requestCamera, onResetState]);
+      onResetState();
+      requestCamera();
+    } catch (e) {
+      console.error('Error requesting camera:', e);
+    }
+  }, [requestCamera, onResetState, session]);
 
   useEffect(() => {
     if (cameraStreaming) {
