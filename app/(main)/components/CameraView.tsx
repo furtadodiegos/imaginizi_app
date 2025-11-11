@@ -20,7 +20,7 @@ type CameraViewProps = {
   closeCamera: () => void;
   takePhoto: () => Promise<void>;
   retakePhoto: () => void;
-  generateImage: () => Promise<void>;
+  generateImage: (imagePreview: string) => Promise<void>;
 };
 
 export default function CameraView({
@@ -40,7 +40,6 @@ export default function CameraView({
 
   const overlayRef = useRef<HTMLCanvasElement>(null);
 
-  // quando o vídeo estiver pronto (metadata loaded), inicia o guidance
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -90,7 +89,6 @@ export default function CameraView({
     };
   }, [start, stop, videoRef, cameraStreaming]);
 
-  // desenhar overlay quando guidance mudar
   useEffect(() => {
     const c = overlayRef.current;
     const v = videoRef.current;
@@ -106,19 +104,8 @@ export default function CameraView({
 
     if (!guidance) return;
 
-    // semáforo
     const color = guidance.level === 'GOOD' ? '#22c55e' : guidance.level === 'OK' ? '#eab308' : '#ef4444';
 
-    // oval central (zona alvo)
-    // ctx.save();
-    // ctx.strokeStyle = color;
-    // ctx.lineWidth = 2;
-    // ctx.beginPath();
-    // ctx.ellipse(W / 2, H / 2, W * 0.25, H * 0.35, 0, 0, Math.PI * 2);
-    // ctx.stroke();
-    // ctx.restore();
-
-    // face/olhos/boca
     const drawBox = (b?: { x: number; y: number; w: number; h: number }) => {
       if (!b) return;
 
@@ -131,7 +118,6 @@ export default function CameraView({
     drawBox(guidance.rightEye);
     drawBox(guidance.mouth);
 
-    // linha dos olhos (se ambos presentes)
     if (guidance.leftEye && guidance.rightEye) {
       const le = guidance.leftEye;
       const re = guidance.rightEye;
@@ -148,13 +134,11 @@ export default function CameraView({
       ctx.stroke();
     }
 
-    // texto
-    ctx.fillStyle = color;
-    ctx.font = '16px system-ui, -apple-system, sans-serif';
-    ctx.fillText(guidance.text ?? '', 12, H - 16);
+    // Guidance text
+    // ctx.fillStyle = color;
+    // ctx.font = '16px system-ui, -apple-system, sans-serif';
+    // ctx.fillText(guidance.text ?? '', 12, H - 16);
   }, [guidance, videoRef]);
-
-  const canCapture = !!guidance?.canCapture;
 
   return (
     <div
@@ -184,12 +168,6 @@ export default function CameraView({
         className="absolute z-12 inset-0 w-full h-full object-cover top-0 left-0 pointer-events-none"
       />
 
-      <button
-        disabled={!canCapture}
-        className="absolute bottom-8 left-0 right-0 z-11 flex items-center justify-center gap-x-8">
-        Agora está bom
-      </button>
-
       <canvas
         ref={photoCanvasRef}
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: imagePreview ? 'block' : 'none' }}
@@ -202,7 +180,7 @@ export default function CameraView({
               Tirar Novamente
             </Button>
 
-            <Button className="rounded-full px-6 py-2 text-lg" onClick={generateImage}>
+            <Button className="rounded-full px-6 py-2 text-lg" onClick={() => generateImage(imagePreview)}>
               Usar Foto
             </Button>
 

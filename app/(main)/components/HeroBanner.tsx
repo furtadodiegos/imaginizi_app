@@ -6,8 +6,7 @@ import React from 'react';
 import type { FC } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { PermissionState } from '@/hooks/useCamera';
 
 import AranhaPng from '../assets/aranha.png';

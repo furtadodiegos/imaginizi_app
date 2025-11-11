@@ -1,12 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect } from 'react';
 
+import { useMain } from '@/app/(main)/hooks';
 import { Overlay } from '@/components/Overlay';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCamera } from '@/hooks/useCamera';
-import { dataURLtoFile } from '@/lib/utils';
 
 import { HeroBanner } from './components';
 
@@ -18,11 +20,7 @@ const CameraView = dynamic(() => import('./components/CameraView'), {
 const OVERFLOW_HIDDEN = 'overflow-hidden';
 
 export default function Home() {
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [prompt /*, setPrompt */] = useState('marvel spider man from the movie spiderman into the spider verse');
-  // const [prompt, setPrompt] = useState('buzz lightyear from toy story');
-  const [generatedImage, setGeneratedImage] = useState('');
+  const { error, isLoading, generatedImage, generateImage, onResetState } = useMain();
 
   const {
     cameraError,
@@ -37,56 +35,12 @@ export default function Home() {
     closeCamera,
   } = useCamera();
 
-  const generateImage = async () => {
-    if (!imagePreview || !prompt) {
-      setError('Por favor, tire uma foto e insira um prompt.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    const formData = new FormData();
-    const imageFile = dataURLtoFile(imagePreview, 'photo.png');
-
-    if (!imageFile) {
-      setError('Erro ao converter a imagem para arquivo.');
-      setIsLoading(false);
-      return;
-    }
-
-    formData.append('image', imageFile);
-    formData.append('prompt', prompt);
-
-    try {
-      const response = await fetch('/api/image', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-
-        throw new Error(errorData.error || 'Falha ao gerar imagem.');
-      }
-
-      const data = await response.json();
-
-      setGeneratedImage(data.image);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const onRequestCamera = useCallback(async () => {
-    setGeneratedImage('');
-    setError('');
+    onResetState();
 
     // TODO: add the login before request the camera
     requestCamera();
-  }, [requestCamera]);
+  }, [requestCamera, onResetState]);
 
   useEffect(() => {
     if (cameraStreaming) {
@@ -120,8 +74,30 @@ export default function Home() {
         />
 
         <footer className="bg-muted py-6">
-          <div className="container mx-auto px-4 text-center text-muted-foreground">
-            <p>© 2025 Imaginizi. Todos os direitos reservados.</p>
+          <div className="container mx-auto px-4 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+            <div className="container flex items-center justify-center gap-2">
+              <Link
+                href="https://www.linkedin.com/in/furtadodiegos/"
+                target="_blank"
+                className="flex flex-col items-center justify-center gap-2">
+                <Avatar>
+                  <AvatarImage src="https://media.licdn.com/dms/image/v2/C4E03AQEuaG3cJdPXPQ/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1587041120549?e=1764201600&v=beta&t=x3St0LJ6B8yyDn6cYiLegBOdpZGU-zuQBQ_f6feWeBI" />
+                  <AvatarFallback>DF</AvatarFallback>
+                </Avatar>
+
+                <p className="text-sm font-medium text-muted-foreground">© 2025 Imaginizi</p>
+              </Link>
+            </div>
+
+            <div className="container flex flex-col items-center justify-center">
+              <p className="text-xs text-muted-foreground text-center px-4">
+                Projeto experimental sem fins comerciais.
+              </p>
+
+              <p className="text-xs text-muted-foreground text-center px-4">
+                Personagens pertencem a seus respectivos detentores de direitos.
+              </p>
+            </div>
           </div>
         </footer>
 

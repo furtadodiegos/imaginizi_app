@@ -64,16 +64,17 @@ export function useCamera() {
 
   const takePhoto = useCallback(async () => {
     const video = videoRef.current!;
-
-    // Make a canvas memory with the video dimensions
     const canvas = photoCanvasRef.current!;
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext('2d')!;
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const photo = canvas.toDataURL();
+
     setImagePreview(photo);
   }, []);
 
@@ -101,14 +102,15 @@ export function useCamera() {
     checkPermission();
   }, [checkPermission]);
 
-  // Cleanup to stop the camera when the component is unmounted
   useEffect(() => {
     const videoElement = videoRef.current;
 
     return () => {
       if (videoElement?.srcObject) {
         const stream = videoElement.srcObject as MediaStream;
+
         stream.getTracks().forEach((track) => track.stop());
+
         setCameraStreaming(false);
       }
     };

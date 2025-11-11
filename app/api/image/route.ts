@@ -1,7 +1,7 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Part } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs'; // garante Node runtime (SDK pede Node 20+)
+export const runtime = 'nodejs';
 
 const client = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY!,
@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltou imagem ou prompt' }, { status: 400 });
     }
 
-    // Lê a imagem enviada (binary -> base64)
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -28,8 +27,6 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // Modelo de imagem do Gemini (Nano Banana / Flash Image)
-    // Ver docs: gemini-2.5-flash-image / imagem & edição. :contentReference[oaicite:2]{index=2}
     const result = await client.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [
@@ -51,10 +48,11 @@ Não mude traços principais do rosto, apenas roupa, cenário e estilo.
     });
 
     const candidate = result.candidates?.[0];
-    const partWithImage = candidate?.content?.parts?.find((p: any) => p.inlineData) as any;
+    const partWithImage = candidate?.content?.parts?.find((p: Part) => p.inlineData);
 
     if (!partWithImage?.inlineData?.data) {
       console.error('Nenhuma imagem retornada', JSON.stringify(result, null, 2));
+
       return NextResponse.json({ error: 'Gemini não retornou imagem' }, { status: 500 });
     }
 
@@ -66,6 +64,7 @@ Não mude traços principais do rosto, apenas roupa, cenário e estilo.
     });
   } catch (e) {
     console.error(e);
+
     return NextResponse.json({ error: 'Erro interno com o Gemini' }, { status: 500 });
   }
 }

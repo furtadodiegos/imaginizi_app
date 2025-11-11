@@ -22,15 +22,14 @@ export type GuidanceMsg = {
 
 export type InitPayload = {
   type: 'init';
-  cascadesBase?: string; // default: /libs/cascades
-  opencvBase?: string; // default: /libs/opencv
+  cascadesBase?: string;
+  opencvBase?: string;
 };
 
 export type FramePayload = {
   type: 'frame';
   width: number;
   height: number;
-  // ImageData transferred from OffscreenCanvas or main thread
   image: ImageData;
 };
 
@@ -42,20 +41,18 @@ let faceCascade: any, eyeCascade: any, mouthCascade: any;
 let lastFaceCenter: { x: number; y: number } | null = null;
 let consecutiveGood = 0;
 
-// thresholds iniciais (ajuste fino depois)
 const TH = {
-  minSharpness: 100, // variância do Laplaciano
-  minBrightness: 90, // média luminância
+  minSharpness: 100,
+  minBrightness: 90,
   maxBrightness: 180,
   maxRollDeg: 10,
-  minScalePct: 35, // face ocupa % da largura do frame
+  minScalePct: 35,
   maxScalePct: 55,
-  centerTolerancePct: 12, // tolerância do centro (em % do frame)
+  centerTolerancePct: 12,
   motionPxPerFrame: 8,
   goodFramesRequired: 15,
 };
 
-// aponta para /public/libs/opencv/*
 (self as any).Module = {
   wasmBinaryFile: '/libs/opencv/opencv_js.wasm',
   locateFile: (p: string) => (p.endsWith('.wasm') ? '/libs/opencv/opencv_js.wasm' : '/libs/opencv/' + p),
@@ -89,7 +86,8 @@ function varianceOfLaplacian(gray: any) {
 
 function meanBrightness(gray: any) {
   const m = cv.mean(gray);
-  return m[0]; // 0..255
+
+  return m[0];
 }
 
 function centerDelta(face: OverlayBox, W: number, H: number) {
@@ -119,16 +117,13 @@ function assess(
 ): GuidanceMsg {
   if (!face) return { level: 'BAD', text: 'Aproxime-se e centralize o rosto', canCapture: false };
 
-  // escala
   const scale = pct(face.w, W);
 
-  // centralização
   const { dx, dy } = centerDelta(face, W, H);
   const dxPct = pct(Math.abs(dx), W);
   const dyPct = pct(Math.abs(dy), H);
   const centered = dxPct <= TH.centerTolerancePct && dyPct <= TH.centerTolerancePct;
 
-  // roll (se tiver olhos)
   let rollDeg = 0;
   if (leftEye && rightEye) {
     const cl = { x: leftEye.x + leftEye.w / 2, y: leftEye.y + leftEye.h / 2 };
@@ -136,7 +131,6 @@ function assess(
     rollDeg = angleDeg(cl, cr);
   }
 
-  // movimento (face center delta entre frames)
   let stable = true;
   const curCenter = { x: face.x + face.w / 2, y: face.y + face.h / 2 };
   if (lastFaceCenter) {
@@ -237,87 +231,82 @@ function validImageData(img: ImageData, W: number, H: number) {
   return img && W > 0 && H > 0 && img.data && img.data.byteLength === W * H * 4;
 }
 
-function clampRect(x: number, y: number, w: number, h: number, W: number, H: number) {
-  const fx = Math.max(0, Math.min(x, W - 1));
-  const fy = Math.max(0, Math.min(y, H - 1));
-  const fw = Math.max(0, Math.min(w, W - fx));
-  const fh = Math.max(0, Math.min(h, H - fy));
-  return { x: fx, y: fy, w: fw, h: fh };
-}
-
 async function detectFrame(payload: FramePayload): Promise<GuidanceMsg> {
   const { image, width, height } = payload;
 
-  // TODO
   if (!validImageData(image, width, height)) {
     return { level: 'BAD', text: 'Aproxime-se e centralize o rosto', canCapture: false };
   }
 
-  const src = cv.matFromImageData(image); // RGBA
-  const gray = asGray(src);
+  let src: any | undefined;
+  let gray: any | undefined;
+  let faces: any | undefined;
+  let roi: any | undefined;
+  let roiEyes: any | undefined;
+  let roiMouth: any | undefined;
+  let eyes: any | undefined;
+  let mouths: any | undefined;
 
-  // detecta face
-  const faces = new cv.RectVector();
-  const minSize = new cv.Size(Math.round(width * 0.15), Math.round(height * 0.15));
-  faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, minSize);
+  try {
+    src = cv.matFromImageData(image);
+    gray = asGray(src);
 
-  let faceBox: OverlayBox | undefined;
-  let leftEyeBox: OverlayBox | undefined;
-  let rightEyeBox: OverlayBox | undefined;
-  let mouthBox: OverlayBox | undefined;
+    faces = new cv.RectVector();
+    const minSize = new cv.Size(Math.round(width * 0.15), Math.round(height * 0.15));
+    faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, minSize);
 
-  if (faces.size() === 1) {
-    const f = faces.get(0);
-    faceBox = { x: f.x, y: f.y, w: f.width, h: f.height };
+    let faceBox: OverlayBox | undefined;
+    let leftEyeBox: OverlayBox | undefined;
+    let rightEyeBox: OverlayBox | undefined;
+    let mouthBox: OverlayBox | undefined;
 
-    // ROI do rosto
-    const roi = gray.roi(new cv.Rect(f.x, f.y, f.width, f.height));
+    if (faces.size() === 1) {
+      const f = faces.get(0);
+      faceBox = { x: f.x, y: f.y, w: f.width, h: f.height };
 
-    // olhos: procurar na metade superior
-    const eyes = new cv.RectVector();
-    const roiEyes = roi.roi(new cv.Rect(0, 0, roi.cols, Math.max(1, Math.round(roi.rows * 0.55))));
-    eyeCascade.detectMultiScale(roiEyes, eyes, 1.15, 3);
+      roi = gray.roi(new cv.Rect(f.x, f.y, f.width, f.height));
 
-    const eyeRects: OverlayBox[] = [];
-    for (let i = 0; i < eyes.size(); i++) {
-      const e = eyes.get(i);
-      eyeRects.push({ x: f.x + e.x, y: f.y + e.y, w: e.width, h: e.height });
+      eyes = new cv.RectVector();
+      roiEyes = roi.roi(new cv.Rect(0, 0, roi.cols, Math.max(1, Math.round(roi.rows * 0.55))));
+      eyeCascade.detectMultiScale(roiEyes, eyes, 1.15, 3);
+
+      const eyeRects: OverlayBox[] = [];
+      for (let i = 0; i < eyes.size(); i++) {
+        const e = eyes.get(i);
+        eyeRects.push({ x: f.x + e.x, y: f.y + e.y, w: e.width, h: e.height });
+      }
+
+      if (eyeRects.length >= 2) {
+        eyeRects.sort((a, b) => a.x - b.x);
+        leftEyeBox = eyeRects[0];
+        rightEyeBox = eyeRects[eyeRects.length - 1];
+      }
+
+      mouths = new cv.RectVector();
+      roiMouth = roi.roi(new cv.Rect(0, Math.round(roi.rows * 0.45), roi.cols, Math.round(roi.rows * 0.55)));
+      mouthCascade.detectMultiScale(roiMouth, mouths, 1.2, 5);
+      if (mouths.size() >= 1) {
+        const m = mouths.get(0);
+        mouthBox = { x: f.x + m.x, y: f.y + Math.round(roi.rows * 0.45) + m.y, w: m.width, h: m.height };
+      }
     }
-    // escolha heurística: dois olhos mais afastados no eixo X
-    if (eyeRects.length >= 2) {
-      eyeRects.sort((a, b) => a.x - b.x);
-      leftEyeBox = eyeRects[0];
-      rightEyeBox = eyeRects[eyeRects.length - 1];
-    }
 
-    // boca: procurar na metade inferior
-    const mouths = new cv.RectVector();
-    const roiMouth = roi.roi(new cv.Rect(0, Math.round(roi.rows * 0.45), roi.cols, Math.round(roi.rows * 0.55)));
-    mouthCascade.detectMultiScale(roiMouth, mouths, 1.2, 5);
-    if (mouths.size() >= 1) {
-      const m = mouths.get(0);
-      mouthBox = { x: f.x + m.x, y: f.y + Math.round(roi.rows * 0.45) + m.y, w: m.width, h: m.height };
-    }
+    const sharp = varianceOfLaplacian(gray);
+    const bright = meanBrightness(gray);
 
-    roiEyes.delete();
-    roiMouth.delete();
-    eyes.delete();
-    mouths.delete();
-    roi.delete();
+    return assess(faceBox, leftEyeBox, rightEyeBox, mouthBox, width, height, sharp, bright);
+  } finally {
+    try {
+      mouths && mouths.delete();
+      eyes && eyes.delete();
+      roiEyes && roiEyes.delete();
+      roiMouth && roiMouth.delete();
+      roi && roi.delete();
+      faces && faces.delete();
+      gray && gray.delete();
+      src && src.delete();
+    } catch {}
   }
-
-  // métricas
-  const sharp = varianceOfLaplacian(gray);
-  const bright = meanBrightness(gray);
-
-  const msg = assess(faceBox, leftEyeBox, rightEyeBox, mouthBox, width, height, sharp, bright);
-
-  // cleanup
-  faces.delete();
-  gray.delete();
-  src.delete();
-
-  return msg;
 }
 
 let initIsComplete = false;
@@ -330,14 +319,9 @@ self.onmessage = async (e: MessageEvent<InitPayload | FramePayload>) => {
 
   try {
     if (msg.type === 'init') {
-      console.log('init');
-
       await ensureCV();
-      console.log('>>> CV ready');
 
       await loadCascades(msg.cascadesBase ?? '/libs/cascades');
-
-      console.log('>>> Cascades loaded');
 
       (self as any).postMessage({ type: 'ready' });
 
@@ -355,8 +339,10 @@ self.onmessage = async (e: MessageEvent<InitPayload | FramePayload>) => {
     }
   } catch (err: any) {
     if ((msg as any)?.type === 'frame') {
-      // Erros esporádicos por frame (abort numérico do OpenCV) não devem poluir o console
-      console.debug('frame-error', err);
+      (self as any).postMessage({
+        type: 'guidance',
+        payload: { level: 'BAD', text: 'Processando…', canCapture: false },
+      });
       return;
     }
 

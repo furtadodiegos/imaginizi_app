@@ -8,6 +8,11 @@ const createWorker = () =>
     type: 'module',
   });
 
+type WorkerOutMessage =
+  | { type: 'ready' }
+  | { type: 'guidance'; payload: GuidanceMsg }
+  | { type: 'error'; message: string };
+
 export function useVisionGuidance() {
   const workerRef = useRef<Worker | null>(null);
   const [ready, setReady] = useState(false);
@@ -26,9 +31,9 @@ export function useVisionGuidance() {
     source: HTMLVideoElement | HTMLCanvasElement;
     width: number;
     height: number;
-    fps?: number; // ex: 12
-    cascadesBase?: string; // /libs/cascades
-    opencvBase?: string; // /libs/opencv
+    fps?: number;
+    cascadesBase?: string;
+    opencvBase?: string;
   }) => {
     stop();
 
@@ -56,18 +61,21 @@ export function useVisionGuidance() {
 
       const tick = () => {
         rafId = self.requestAnimationFrame(tick);
+
         const now = performance.now();
         const dt = now - last;
+
         accum += dt;
         last = now;
+
         if (accum < interval) return;
         accum = 0;
 
-        // desenha frame atual na offscreen
         if (isVideo) {
           const v = src as HTMLVideoElement;
-          // aguarda vídeo estar pronto (dimensões > 0)
+
           if (v.videoWidth === 0 || v.videoHeight === 0) return;
+
           ctx.drawImage(v, 0, 0, opts.width, opts.height);
         } else {
           const c = src as HTMLCanvasElement;
@@ -83,8 +91,8 @@ export function useVisionGuidance() {
       tick();
     };
 
-    w.onmessage = (e: MessageEvent<InitPayload | FramePayload | GuidanceMsg | any>) => {
-      const msg: any = e.data;
+    w.onmessage = (e: MessageEvent<WorkerOutMessage>) => {
+      const msg = e.data;
 
       if (msg.type === 'ready') {
         setReady(true);
@@ -99,7 +107,6 @@ export function useVisionGuidance() {
 
       if (msg.type === 'error') {
         console.error('[vision.worker]', msg.message);
-        return;
       }
     };
 
