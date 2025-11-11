@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare const self: DedicatedWorkerGlobalScope;
 export {};
 
@@ -53,9 +54,11 @@ const TH = {
   goodFramesRequired: 15,
 };
 
+const WASM_BINARY_FILE = '/libs/opencv/opencv_js.wasm';
+
 (self as any).Module = {
-  wasmBinaryFile: '/libs/opencv/opencv_js.wasm',
-  locateFile: (p: string) => (p.endsWith('.wasm') ? '/libs/opencv/opencv_js.wasm' : '/libs/opencv/' + p),
+  wasmBinaryFile: WASM_BINARY_FILE,
+  locateFile: (p: string) => (p.endsWith('.wasm') ? WASM_BINARY_FILE : '/libs/opencv/' + p),
 };
 
 function asGray(matRGBA: any) {
@@ -105,6 +108,33 @@ function angleDeg(p1: { x: number; y: number }, p2: { x: number; y: number }) {
   return (ang * 180) / Math.PI;
 }
 
+function handleReasons(
+  scale: number,
+  centered: boolean,
+  dx: number,
+  dy: number,
+  rollDeg: number,
+  sharpness: number,
+  brightness: number,
+) {
+  const reasons: string[] = [];
+
+  if (scale < TH.minScalePct) reasons.push('aproxime-se');
+  if (scale > TH.maxScalePct) reasons.push('afaste-se');
+  if (!centered) {
+    if (dx > 0) reasons.push('mova um pouco para a esquerda');
+    else if (dx < 0) reasons.push('mova um pouco para a direita');
+    if (dy > 0) reasons.push('mova um pouco para cima');
+    else if (dy < 0) reasons.push('mova um pouco para baixo');
+  }
+  if (Math.abs(rollDeg) > TH.maxRollDeg) reasons.push('nívele a cabeça');
+  if (sharpness < TH.minSharpness) reasons.push('melhorar nitidez (fique parado / foco)');
+  if (brightness < TH.minBrightness) reasons.push('mais luz frontal');
+  if (brightness > TH.maxBrightness) reasons.push('muita luz (estouro)');
+
+  return reasons;
+}
+
 function assess(
   face: OverlayBox | undefined,
   leftEye: OverlayBox | undefined,
@@ -140,20 +170,7 @@ function assess(
   }
   lastFaceCenter = curCenter;
 
-  const reasons: string[] = [];
-
-  if (scale < TH.minScalePct) reasons.push('aproxime-se');
-  if (scale > TH.maxScalePct) reasons.push('afaste-se');
-  if (!centered) {
-    if (dx > 0) reasons.push('mova um pouco para a esquerda');
-    else if (dx < 0) reasons.push('mova um pouco para a direita');
-    if (dy > 0) reasons.push('mova um pouco para cima');
-    else if (dy < 0) reasons.push('mova um pouco para baixo');
-  }
-  if (Math.abs(rollDeg) > TH.maxRollDeg) reasons.push('nívele a cabeça');
-  if (sharpness < TH.minSharpness) reasons.push('melhorar nitidez (fique parado / foco)');
-  if (brightness < TH.minBrightness) reasons.push('mais luz frontal');
-  if (brightness > TH.maxBrightness) reasons.push('muita luz (estouro)');
+  const reasons = handleReasons(scale, centered, dx, dy, rollDeg, sharpness, brightness);
 
   const allOk = reasons.length === 0 && stable;
 
@@ -193,7 +210,7 @@ async function ensureCV() {
     if (!cv) throw new Error('cv not available');
 
     if (typeof cv === 'function') {
-      const wasm = await fetch('/libs/opencv/opencv_js.wasm').then((r) => r.arrayBuffer());
+      const wasm = await fetch(WASM_BINARY_FILE).then((r) => r.arrayBuffer());
 
       cv = cv({ wasmBinary: wasm });
 
@@ -231,6 +248,52 @@ function validImageData(img: ImageData, W: number, H: number) {
   return img && W > 0 && H > 0 && img.data && img.data.byteLength === W * H * 4;
 }
 
+function handleFaceDetection(props: any) {
+  props.faces = new cv.RectVector();
+  const minSize = new cv.Size(Math.round(props.width * 0.15), Math.round(props.height * 0.15));
+  faceCascade.detectMultiScale(props.gray, props.faces, 1.1, 3, 0, minSize);
+
+  let faceBox: OverlayBox | undefined;
+  let leftEyeBox: OverlayBox | undefined;
+  let rightEyeBox: OverlayBox | undefined;
+  let mouthBox: OverlayBox | undefined;
+
+  if (props.faces.size() === 1) {
+    const f = props.faces.get(0);
+    faceBox = { x: f.x, y: f.y, w: f.width, h: f.height };
+
+    props.roi = props.gray.roi(new cv.Rect(f.x, f.y, f.width, f.height));
+
+    props.eyes = new cv.RectVector();
+    props.roiEyes = props.roi.roi(new cv.Rect(0, 0, props.roi.cols, Math.max(1, Math.round(props.roi.rows * 0.55))));
+    eyeCascade.detectMultiScale(props.roiEyes, props.eyes, 1.15, 3);
+
+    const eyeRects: OverlayBox[] = [];
+    for (let i = 0; i < props.eyes.size(); i++) {
+      const e = props.eyes.get(i);
+      eyeRects.push({ x: f.x + e.x, y: f.y + e.y, w: e.width, h: e.height });
+    }
+
+    if (eyeRects.length >= 2) {
+      eyeRects.sort((a, b) => a.x - b.x);
+      leftEyeBox = eyeRects[0];
+      rightEyeBox = eyeRects[eyeRects.length - 1];
+    }
+
+    props.mouths = new cv.RectVector();
+    props.roiMouth = props.roi.roi(
+      new cv.Rect(0, Math.round(props.roi.rows * 0.45), props.roi.cols, Math.round(props.roi.rows * 0.55)),
+    );
+    mouthCascade.detectMultiScale(props.roiMouth, props.mouths, 1.2, 5);
+    if (props.mouths.size() >= 1) {
+      const m = props.mouths.get(0);
+      mouthBox = { x: f.x + m.x, y: f.y + Math.round(props.roi.rows * 0.45) + m.y, w: m.width, h: m.height };
+    }
+  }
+
+  return { faceBox, leftEyeBox, rightEyeBox, mouthBox };
+}
+
 async function detectFrame(payload: FramePayload): Promise<GuidanceMsg> {
   const { image, width, height } = payload;
 
@@ -251,45 +314,17 @@ async function detectFrame(payload: FramePayload): Promise<GuidanceMsg> {
     src = cv.matFromImageData(image);
     gray = asGray(src);
 
-    faces = new cv.RectVector();
-    const minSize = new cv.Size(Math.round(width * 0.15), Math.round(height * 0.15));
-    faceCascade.detectMultiScale(gray, faces, 1.1, 3, 0, minSize);
-
-    let faceBox: OverlayBox | undefined;
-    let leftEyeBox: OverlayBox | undefined;
-    let rightEyeBox: OverlayBox | undefined;
-    let mouthBox: OverlayBox | undefined;
-
-    if (faces.size() === 1) {
-      const f = faces.get(0);
-      faceBox = { x: f.x, y: f.y, w: f.width, h: f.height };
-
-      roi = gray.roi(new cv.Rect(f.x, f.y, f.width, f.height));
-
-      eyes = new cv.RectVector();
-      roiEyes = roi.roi(new cv.Rect(0, 0, roi.cols, Math.max(1, Math.round(roi.rows * 0.55))));
-      eyeCascade.detectMultiScale(roiEyes, eyes, 1.15, 3);
-
-      const eyeRects: OverlayBox[] = [];
-      for (let i = 0; i < eyes.size(); i++) {
-        const e = eyes.get(i);
-        eyeRects.push({ x: f.x + e.x, y: f.y + e.y, w: e.width, h: e.height });
-      }
-
-      if (eyeRects.length >= 2) {
-        eyeRects.sort((a, b) => a.x - b.x);
-        leftEyeBox = eyeRects[0];
-        rightEyeBox = eyeRects[eyeRects.length - 1];
-      }
-
-      mouths = new cv.RectVector();
-      roiMouth = roi.roi(new cv.Rect(0, Math.round(roi.rows * 0.45), roi.cols, Math.round(roi.rows * 0.55)));
-      mouthCascade.detectMultiScale(roiMouth, mouths, 1.2, 5);
-      if (mouths.size() >= 1) {
-        const m = mouths.get(0);
-        mouthBox = { x: f.x + m.x, y: f.y + Math.round(roi.rows * 0.45) + m.y, w: m.width, h: m.height };
-      }
-    }
+    const { faceBox, leftEyeBox, rightEyeBox, mouthBox } = handleFaceDetection({
+      faces,
+      gray,
+      width,
+      height,
+      roi,
+      eyes,
+      roiEyes,
+      mouths,
+      roiMouth,
+    });
 
     const sharp = varianceOfLaplacian(gray);
     const bright = meanBrightness(gray);
@@ -297,15 +332,17 @@ async function detectFrame(payload: FramePayload): Promise<GuidanceMsg> {
     return assess(faceBox, leftEyeBox, rightEyeBox, mouthBox, width, height, sharp, bright);
   } finally {
     try {
-      mouths && mouths.delete();
-      eyes && eyes.delete();
-      roiEyes && roiEyes.delete();
-      roiMouth && roiMouth.delete();
-      roi && roi.delete();
-      faces && faces.delete();
-      gray && gray.delete();
-      src && src.delete();
-    } catch {}
+      if (mouths) mouths.delete();
+      if (eyes) eyes.delete();
+      if (roiEyes) roiEyes.delete();
+      if (roiMouth) roiMouth.delete();
+      if (roi) roi.delete();
+      if (faces) faces.delete();
+      if (gray) gray.delete();
+      if (src) src.delete();
+    } catch (e) {
+      console.error('Error deleting cv objects:', e);
+    }
   }
 }
 
