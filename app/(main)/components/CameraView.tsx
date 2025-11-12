@@ -1,13 +1,16 @@
 'use client';
 
-import { Loader2, RefreshCcw, X } from 'lucide-react';
+import { Loader2, RefreshCcw, SendHorizontal, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 import { AvatarList } from '@/app/(main)/components/AvatarList';
 import { Overlay } from '@/components/Overlay';
 import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLegend, FieldSet } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { useVisionGuidance } from '@/hooks/useCameraGuidance';
+import { useKeyboardAvoidance } from '@/hooks/useKeyboardAvoidance';
 import { cn } from '@/lib/utils';
 
 type CameraViewProps = {
@@ -40,6 +43,7 @@ export default function CameraView({
   const [prompt, setPrompt] = useState('');
 
   const { guidance, start, stop } = useVisionGuidance();
+  useKeyboardAvoidance();
 
   const overlayRef = useRef<HTMLCanvasElement>(null);
 
@@ -192,20 +196,42 @@ export default function CameraView({
           imagePreview ? 'bottom-0 bg-black/90 backdrop-blur-sm' : 'bottom-8',
         )}>
         {imagePreview ? (
-          <div className="w-full max-w-md mx-4 p-2 pb-8 pl-12">
-            <AvatarList onSelect={(p) => setPrompt(p)} />
+          <form
+            className="w-full max-w-md mx-4 p-2 pb-8"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (prompt) {
+                generateImage(imagePreview, prompt);
+              }
+            }}>
+            <FieldGroup>
+              <FieldSet>
+                <FieldLegend className="text-start text-lg font-bold text-white">Nice Picture</FieldLegend>
+                <FieldDescription className="text-start text-sm font-bold text-white/50">
+                  Now, which character you want to be?
+                </FieldDescription>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+                <FieldGroup>
+                  <Field>
+                    <Input
+                      id="prompt"
+                      placeholder="Buzz Lightyear from Toy Story 4"
+                      required
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                    />
+                  </Field>
 
-            {prompt && (
-              <div className="flex items-center justify-end">
-                <Button
-                  onClick={() => generateImage(imagePreview, prompt)}
-                  variant="link"
-                  className="text-white text-lg underline font-bold">{`Let's Imaginzi -->`}</Button>
-              </div>
-            )}
-          </div>
+                  <Button
+                    type="submit"
+                    className="rounded-full absolute right-6 bottom-[33px] bg-transparent"
+                    disabled={!prompt}>
+                    <SendHorizontal className="size-6 text-white" />
+                  </Button>
+                </FieldGroup>
+              </FieldSet>
+            </FieldGroup>
+          </form>
         ) : (
           <Button
             onClick={takePhoto}

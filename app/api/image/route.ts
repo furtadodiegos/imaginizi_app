@@ -43,6 +43,22 @@ export async function POST(req: NextRequest) {
       },
     };
 
+    // Prefira: Uma foto da cintura para cima, garantindo que seu rosto seja o elemento principal, bem focado e claro.
+
+    //     You received a picture of a person.
+    // The person in the photo wants to look like the ${prompt}.
+    // Keep the face recognizable, use a realistic style, nice lighting, and ensure the photo is high quality.
+    // Do not change the person's main facial features, only clothing, background, and style.
+    //               `.trim(),
+
+    const text_prompt = `Transform the person in the photo so that they become the character: ${prompt}.
+
+Important instructions:
+1. **Transformation, not companionship**: The person in the photo should be transformed into the character. Do NOT place them next to the character in a scene.
+2. **Recognizable face**: Keep the essential facial features of the original person so they remain recognizable.
+3. **Character style**: Adapt clothes, hair, body, and the background to reflect the universe and appearance of ${prompt}.
+4. **Quality**: Generate a high-quality image, with cinematic lighting and realistic style.`.trim();
+
     const result = await client.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [
@@ -51,12 +67,7 @@ export async function POST(req: NextRequest) {
           parts: [
             inlineImage,
             {
-              text: `
-Você recebeu uma foto de uma pessoa.
-A pessoa da foto quer ficar parecido com: ${prompt}.
-Mantenha o rosto reconhecível, estilo realista, iluminação bonita, foto com qualidade alta.
-Não mude traços principais do rosto, apenas roupa, cenário e estilo.
-              `.trim(),
+              text: text_prompt,
             },
           ],
         },
