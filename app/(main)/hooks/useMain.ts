@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { SentryService } from '@/lib/services/sentry';
 import { dataURLtoFile } from '@/lib/utils';
 
 export const useMain = () => {
@@ -21,7 +22,7 @@ export const useMain = () => {
     const imageFile = dataURLtoFile(imagePreview, 'photo.png');
 
     if (!imageFile) {
-      setError('Erro ao converter a imagem para arquivo.');
+      setError('Error converting image to file.');
       setIsLoading(false);
       return;
     }
@@ -33,12 +34,13 @@ export const useMain = () => {
       const response = await fetch('/api/image', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {
         const errorData = await response.json();
 
-        throw new Error(errorData.error || 'Falha ao gerar imagem.');
+        throw new Error(errorData.error || 'Error generating image.');
       }
 
       const data = await response.json();
@@ -46,6 +48,7 @@ export const useMain = () => {
       setGeneratedImage(data.image);
     } catch (e) {
       setError((e as Error).message);
+      SentryService.captureException(e, { params: { path: 'useMain', method: 'generateImage' } });
     } finally {
       setIsLoading(false);
     }

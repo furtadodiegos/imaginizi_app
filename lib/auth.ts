@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import type { NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions, Session } from 'next-auth';
 
 import { prisma } from '@/lib/db';
 
@@ -16,6 +16,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
+  // TODO: Implement callbacks to set the user's id in the session when necessary
+  // callbacks: {
+  //   async session({ session, token }) {
+  //     if (session.user) {
+  //       session.user.id = (token.sub as string | undefined) ?? undefined;
+  //     }
+  //     return session;
+  //   },
+  // },
   events: {
     async signIn({ user }) {
       if (!user?.email) return;
@@ -36,4 +45,10 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export const getAuthSession = async () => getServerSession(authOptions);
+export const getAuthSession = async (): Promise<Session> => {
+  const session = await getServerSession(authOptions);
+
+  if (!session) throw new Error('No session found');
+
+  return session;
+};

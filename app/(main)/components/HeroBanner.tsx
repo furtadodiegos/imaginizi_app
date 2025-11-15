@@ -104,7 +104,7 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
           WebkitMaskRepeat: 'no-repeat',
           WebkitMaskPosition: 'center',
         }}>
-        <Image src={GuPng} alt="Gu" fill className="object-contain object-center" />
+        <Image src={GuPng} alt="Gu" fill sizes="300px" className="object-contain object-center" />
       </div>
 
       <div className="absolute flex flex-col items-center justify-center bottom-[30px]">

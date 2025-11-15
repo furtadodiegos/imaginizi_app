@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { SentryService, withSentryUser } from '@/lib/services/sentry';
 
 export const runtime = 'nodejs';
 
@@ -10,27 +11,26 @@ const client = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY!,
 });
 
-export async function POST(req: NextRequest) {
+const postHandler = async (req: NextRequest) => {
   try {
     const session = await getAuthSession();
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    const user = await prisma.user.findUnique({ where: { email: session.user.email! } });
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (process.env.NODE_ENV === 'production' && user.quota <= 0)
+    if (process.env.NODE_ENV === 'production' && user.quota <= 0) {
+      SentryService.captureMessage('User out of quota', { params: { route: 'api/image', method: 'POST' } });
       return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
+    }
 
     const formData = await req.formData();
     const file = formData.get('image') as File | null;
     const prompt = formData.get('prompt') as string | null;
 
     if (!file || !prompt) {
-      return NextResponse.json({ error: 'Faltou imagem ou prompt' }, { status: 400 });
+      SentryService.captureMessage('Missing image or prompt', { params: { route: 'api/image', method: 'POST' } });
+      return NextResponse.json({ error: 'Missing image or prompt' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -77,11 +77,7 @@ Important instructions:
     const candidate = result.candidates?.[0];
     const partWithImage = candidate?.content?.parts?.find((p: Part) => p.inlineData);
 
-    if (!partWithImage?.inlineData?.data) {
-      console.error('Nenhuma imagem retornada', JSON.stringify(result, null, 2));
-
-      return NextResponse.json({ error: 'Gemini não retornou imagem' }, { status: 500 });
-    }
+    if (!partWithImage?.inlineData?.data) throw new Error('Gemini did not return image');
 
     const base64 = partWithImage.inlineData.data as string;
     const mimeType = partWithImage.inlineData.mimeType || 'image/png';
@@ -98,8 +94,10 @@ Important instructions:
       image: `data:${mimeType};base64,${base64}`,
     });
   } catch (e) {
-    console.error(e);
+    SentryService.captureException(e, { params: { route: 'api/image', method: 'POST' } });
 
-    return NextResponse.json({ error: 'Erro interno com o Gemini' }, { status: 500 });
+    return NextResponse.json({ error: `Internal error: ${(e as Error)?.message || 'Unknown'}` }, { status: 500 });
   }
-}
+};
+
+export const POST = withSentryUser(postHandler);

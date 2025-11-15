@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn /*, signOut, */, useSession } from 'next-auth/react';
 import { useCallback, useEffect } from 'react';
 
 import { useMain } from '@/app/(main)/hooks';
