@@ -19,7 +19,7 @@ model User {
   email     String   @unique
   name      String?
   image     String?
-  quota     Int      @default(3)
+  quota     Int      @default(2)
   used      Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

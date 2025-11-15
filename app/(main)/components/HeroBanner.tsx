@@ -10,7 +10,6 @@ import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carouse
 import { PermissionState } from '@/hooks/useCamera';
 
 import AranhaPng from '../assets/aranha.png';
-import BurstSvg from '../assets/burst.svg';
 import BuzzPng from '../assets/buzz.png';
 import FerroPng from '../assets/ferro.png';
 import GuPng from '../assets/gu.png';
@@ -40,14 +39,14 @@ const svgMaskForCarousel = `url("data:image/svg+xml,${encodeURIComponent(
 )}")`;
 
 const burstSvgMask = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg viewBox="0 0 300 398" xmlns="http://www.w3.org/2000/svg"><path d="M 100,5 L 120,40 L 160,35 L 155,75 L 195,100 L 150,120 L 165,160 L 125,150 L 100,195 L 75,150 L 35,160 L 50,120 L 5,100 L 45,75 L 40,35 L 80,40 Z" fill="black"/></svg>`,
+  `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path d="M 100,5 L 120,40 L 160,35 L 155,75 L 195,100 L 150,120 L 165,160 L 125,150 L 100,195 L 75,150 L 35,160 L 50,120 L 5,100 L 45,75 L 40,35 L 80,40 Z" fill="black"/></svg>`,
 )}")`;
 
 export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, error }) => {
   const permissionState = cameraPermission || 'denied';
 
   return (
-    <section aria-labelledby="hero-section" className="relative flex flex-col overflow-hidden h-screen">
+    <section aria-labelledby="hero-section" className="relative flex flex-col h-screen w-screen">
       <div
         aria-labelledby="lines-svg"
         className="absolute top-[-20px] right-[-40px] flex items-start justify-end w-full">
@@ -93,26 +92,19 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
         <ThinkingSvg className="pointer-events-none absolute inset-0 z-10 h-full w-full animate-pulse text-white" />
       </div>
 
-      <div className="absolute h-[300px] w-[300px] bottom-[160px] right-[-160px]">
-        <Image
-          src={GuPng}
-          alt="Gu"
-          width={600}
-          height={600}
-          className="object-cover"
-          style={{
-            maskImage: burstSvgMask,
-            maskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskImage: burstSvgMask,
-            WebkitMaskSize: 'contain',
-            WebkitMaskRepeat: 'no-repeat',
-            WebkitMaskPosition: 'center',
-          }}
-        />
-
-        <BurstSvg className="pointer-events-none absolute inset-0 z-10 h-full w-full text-white" />
+      <div
+        className="absolute h-[300px] w-[300px] bottom-[220px] right-[-120px]"
+        style={{
+          maskImage: burstSvgMask,
+          maskSize: 'contain',
+          maskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          WebkitMaskImage: burstSvgMask,
+          WebkitMaskSize: 'contain',
+          WebkitMaskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+        }}>
+        <Image src={GuPng} alt="Gu" fill className="object-contain object-center" />
       </div>
 
       <div className="absolute flex flex-col items-center justify-center bottom-[80px]">

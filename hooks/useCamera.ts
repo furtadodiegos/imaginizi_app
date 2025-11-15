@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
-// 'user' to frontal, 'environment' to rear
 type FacingMode = 'user' | 'environment';
 export type PermissionState = 'prompt' | 'granted' | 'denied';
 
@@ -95,6 +94,7 @@ export function useCamera() {
       videoElement.srcObject = null;
 
       setCameraStreaming(false);
+      setImagePreview('');
     }
   }, []);
 
