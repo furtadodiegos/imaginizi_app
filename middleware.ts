@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-export default async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const token = await getToken({ req });
-
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const requestHeaders = new Headers(req.headers);
 
