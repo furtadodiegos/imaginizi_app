@@ -18,13 +18,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (process.env.NODE_ENV === 'production') {
-      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 
-      if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-      if (user.quota <= 0) return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
-    }
+    if (process.env.NODE_ENV === 'production' && user.quota <= 0)
+      return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
 
     const formData = await req.formData();
     const file = formData.get('image') as File | null;
