@@ -93,7 +93,7 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
       </div>
 
       <div
-        className="absolute h-[300px] w-[300px] bottom-[220px] right-[-120px]"
+        className="absolute h-[300px] w-[300px] bottom-[160px] right-[-120px]"
         style={{
           maskImage: burstSvgMask,
           maskSize: 'contain',
@@ -107,8 +107,8 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
         <Image src={GuPng} alt="Gu" fill className="object-contain object-center" />
       </div>
 
-      <div className="absolute flex flex-col items-center justify-center bottom-[80px]">
-        <h2 className="text-4xl font-bold text-black text-center leading-tight">Imagine o seu personagem favorito</h2>
+      <div className="absolute flex flex-col items-center justify-center bottom-[30px]">
+        <h2 className="text-4xl font-bold text-black text-center leading-9">Imagine o seu personagem favorito</h2>
 
         <p className="text-base text-black text-center px-4 mt-2">
           Agora tire uma foto com a sua melhor pose e veja a magia acontecer.

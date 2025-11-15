@@ -150,10 +150,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    height: 100vh;
-    height: var(--viewport-height, 100vh);
-    overflow: hidden;
-    position: relative;
     @apply bg-background text-foreground;
   }
 }
