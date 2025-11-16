@@ -5,8 +5,12 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  //   provider = "prisma-client"
+  // output   = "../lib/generated/prisma"
+  provider = "prisma-client-js"
+  // binaryTargets opcional: deixe o default (native).
+  // Para forçar builds multiplataforma, descomente abaixo:
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "darwin-arm64"]
 }
 
 datasource db {
