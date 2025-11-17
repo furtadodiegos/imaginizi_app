@@ -63,8 +63,8 @@ export default function Home() {
   }, [cameraStreaming]);
 
   return (
-    <div className="relative">
-      <main className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="relative w-full overflow-x-hidden">
+      <main className="flex min-h-svh flex-col bg-background text-foreground">
         <HeroBanner cameraPermission={cameraPermission} error={cameraError || error} openCamera={onRequestCamera} />
 
         <CameraView

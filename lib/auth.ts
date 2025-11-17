@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import type { NextAuthOptions, Session } from 'next-auth';
@@ -45,10 +46,16 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export const getAuthSession = async (): Promise<Session> => {
-  const session = await getServerSession(authOptions);
+const getAuthSession = async () => getServerSession(authOptions);
 
-  if (!session) throw new Error('No session found');
+export const requireAuth = (handler: (req: NextRequest, session: Session) => Promise<Response> | Response) => {
+  return async (req: NextRequest) => {
+    const session = await getAuthSession();
 
-  return session;
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    return handler(req, session);
+  };
 };

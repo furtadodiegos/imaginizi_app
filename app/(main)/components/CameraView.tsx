@@ -136,11 +136,6 @@ export default function CameraView({
       ctx.lineTo(rcx, rcy);
       ctx.stroke();
     }
-
-    // Guidance text
-    // ctx.fillStyle = color;
-    // ctx.font = '16px system-ui, -apple-system, sans-serif';
-    // ctx.fillText(guidance.text ?? '', 12, H - 16);
   }, [guidance, videoRef]);
 
   useEffect(() => {
@@ -153,12 +148,18 @@ export default function CameraView({
         'absolute inset-0 z-11 h-screen w-screen transition-opacity duration-500 ease-in-out',
         cameraStreaming ? 'opacity-100' : 'opacity-0 pointer-events-none',
       )}>
-      <Button className="absolute top-4 right-4 z-20 h-10 w-10 rounded-full p-2" onClick={closeCamera}>
+      <Button
+        className="absolute top-4 right-4 z-20 h-10 w-10 rounded-full p-2"
+        onClick={closeCamera}
+        aria-label="Close camera">
         <X className="h-6 w-6" />
       </Button>
 
       {imagePreview && (
-        <Button className="absolute top-16 right-4 z-20 h-10 w-10 rounded-full p-2" onClick={retakePhoto}>
+        <Button
+          className="absolute top-16 right-4 z-20 h-10 w-10 rounded-full p-2"
+          onClick={retakePhoto}
+          aria-label="Retake photo">
           <RefreshCcw className="h-6 w-6" />
         </Button>
       )}
@@ -207,11 +208,15 @@ export default function CameraView({
             )}
           </div>
         ) : (
-          <Button
-            onClick={takePhoto}
-            className="h-16 w-16 rounded-full border-4 border-white bg-white/30 backdrop-blur-sm"
-            aria-label="Take Photo"
-          />
+          <div className="flex flex-col items-center">
+            {guidance?.text && <p className="text-white text-sm mb-3 text-center px-4 max-w-sm">{guidance.text}</p>}
+
+            <Button
+              onClick={takePhoto}
+              className={cn('h-16 w-16 rounded-full border-4 border-white bg-white/30 backdrop-blur-sm')}
+              aria-label="Take photo"
+            />
+          </div>
         )}
       </div>
 

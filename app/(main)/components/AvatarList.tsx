@@ -24,13 +24,13 @@ const images: AvatarProps[] = [
     id: 1,
     src: AranhaPng,
     alt: 'Homem-Aranha',
-    prompt: 'marvel spider man from the movie spiderman into the spider verse',
+    prompt: 'Spider-Man from the movie Spider-Man: Into the Spider-Verse',
   },
-  { id: 2, src: MoanaPng, alt: 'Moana', prompt: 'moana from the movie moana 2' },
-  { id: 3, src: WoodyPng, alt: 'Woody', prompt: 'woody from the movie toy story 4' },
-  { id: 4, src: BuzzPng, alt: 'Buzz Lightyear', prompt: 'buzz lightyear from the movie toy story 4' },
-  { id: 5, src: MauiPng, alt: 'Maui', prompt: 'maui from the movie moana 2' },
-  { id: 6, src: FerroPng, alt: 'Homem de Ferro', prompt: 'marvel iron man from the movie the avengers' },
+  { id: 2, src: MoanaPng, alt: 'Moana', prompt: 'Moana from the movie moana 2' },
+  { id: 3, src: WoodyPng, alt: 'Woody', prompt: 'Woody from the movie toy story 4' },
+  { id: 4, src: BuzzPng, alt: 'Buzz Lightyear', prompt: 'Buzz Lightyear from the movie toy story 4' },
+  { id: 5, src: MauiPng, alt: 'Maui', prompt: 'Maui from the movie moana 2' },
+  { id: 6, src: FerroPng, alt: 'Homem de Ferro', prompt: 'Iron Man from the movie The Avengers' },
 ];
 
 type AvatarListProps = {

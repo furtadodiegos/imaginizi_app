@@ -1,7 +1,8 @@
 import { GoogleGenAI, Part } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
+import type { Session } from 'next-auth';
 
-import { getAuthSession } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SentryService, withSentryUser } from '@/lib/services/sentry';
 
@@ -11,10 +12,8 @@ const client = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY!,
 });
 
-const postHandler = async (req: NextRequest) => {
+const postHandler = async (req: NextRequest, session: Session) => {
   try {
-    const session = await getAuthSession();
-
     const user = await prisma.user.findUnique({ where: { email: session.user.email! } });
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -33,30 +32,38 @@ const postHandler = async (req: NextRequest) => {
       return NextResponse.json({ error: 'Missing image or prompt' }, { status: 400 });
     }
 
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
+    const mime = file.type || 'application/octet-stream';
+    if (!allowedTypes.has(mime)) {
+      return NextResponse.json({ error: 'Unsupported image type. Use PNG, JPEG or WEBP.' }, { status: 415 });
+    }
+
+    const MAX_SIZE = 8 * 1024 * 1024;
+    if (typeof file.size === 'number' && file.size > MAX_SIZE) {
+      return NextResponse.json({ error: 'Image too large (max 8MB).' }, { status: 413 });
+    }
+
+    const promptSafe = String(prompt).trim().slice(0, 200);
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const inlineImage = {
       inlineData: {
         data: buffer.toString('base64'),
-        mimeType: file.type || 'image/png',
+        mimeType: mime,
       },
     };
 
-    // Prefira: Uma foto da cintura para cima, garantindo que seu rosto seja o elemento principal, bem focado e claro.
+    const [character, ...universe] = promptSafe.split(' ');
 
-    //     You received a picture of a person.
-    // The person in the photo wants to look like the ${prompt}.
-    // Keep the face recognizable, use a realistic style, nice lighting, and ensure the photo is high quality.
-    // Do not change the person's main facial features, only clothing, background, and style.
-    //               `.trim(),
-
-    const text_prompt = `Transform the person in the photo so that they become the character: ${prompt}.
+    const text_prompt = `Transform the person in the photo so that they become the character: ${character}.
 
 Important instructions:
 1. **Transformation, not companionship**: The person in the photo should be transformed into the character. Do NOT place them next to the character in a scene.
-2. **Recognizable face**: Keep the essential facial features of the original person so they remain recognizable.
-3. **Character style**: Adapt clothes, hair, body, and the background to reflect the universe and appearance of ${prompt}.
+2. **Recognizable face**: Keep the essential facial features of the original person so they remain recognizable, if the character uses a mask, make without the mask.
+2. **Focus on the face and pose**: Keep the face in focus, if the character uses a mask, make without the mask, keep the pose of the original person.
+3. **Character style**: Adapt clothes, hair, body, and the background to reflect the universe and appearance of ${universe.join(' ')}.
 4. **Quality**: Generate a high-quality image, with cinematic lighting and realistic style.`.trim();
 
     const result = await client.models.generateContent({
@@ -100,4 +107,4 @@ Important instructions:
   }
 };
 
-export const POST = withSentryUser(postHandler);
+export const POST = withSentryUser(requireAuth(postHandler));

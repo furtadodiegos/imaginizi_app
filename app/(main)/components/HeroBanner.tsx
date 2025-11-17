@@ -26,12 +26,12 @@ type HeroBannerProps = {
 };
 
 const images = [
-  { src: AranhaPng, alt: 'Homem-Aranha' },
+  { src: AranhaPng, alt: 'Spider-Man' },
   { src: MoanaPng, alt: 'Moana' },
   { src: WoodyPng, alt: 'Woody' },
   { src: BuzzPng, alt: 'Buzz Lightyear' },
   { src: MauiPng, alt: 'Maui' },
-  { src: FerroPng, alt: 'Homem de Ferro' },
+  { src: FerroPng, alt: 'Iron Man' },
 ];
 
 const svgMaskForCarousel = `url("data:image/svg+xml,${encodeURIComponent(
@@ -93,7 +93,7 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
       </div>
 
       <div
-        className="absolute h-[300px] w-[300px] bottom-[160px] right-[-120px]"
+        className="absolute h-[300px] w-[300px] bottom-[160px] right-[-130px]"
         style={{
           maskImage: burstSvgMask,
           maskSize: 'contain',
@@ -108,10 +108,10 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
       </div>
 
       <div className="absolute flex flex-col items-center justify-center bottom-[30px]">
-        <h2 className="text-4xl font-bold text-black text-center leading-9">Imagine o seu personagem favorito</h2>
+        <h2 className="text-4xl font-bold text-black text-center leading-9">Imagine your favorite character</h2>
 
         <p className="text-base text-black text-center px-4 mt-2">
-          Agora tire uma foto com a sua melhor pose e veja a magia acontecer.
+          Now take a photo with your best pose and see the magic happen.
         </p>
 
         <Button
@@ -119,7 +119,7 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
           onClick={openCamera}
           className="mt-4 w-2/3 text-start"
           variant="secondary">
-          Tirar foto
+          Take photo
         </Button>
 
         {error && <p className="text-sm text-red-500">{error}</p>}

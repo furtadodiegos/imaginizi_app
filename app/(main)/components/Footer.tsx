@@ -24,10 +24,12 @@ export const Footer: FC = () => {
         </div>
 
         <div className="container flex flex-col items-center justify-center">
-          <p className="text-xs text-muted-foreground text-center px-4">Projeto experimental sem fins comerciais.</p>
+          <p className="text-xs text-muted-foreground text-center px-4">
+            Experimental project for non-commercial use only.
+          </p>
 
           <p className="text-xs text-muted-foreground text-center px-4">
-            Personagens pertencem a seus respectivos detentores de direitos.
+            Characters belong to their respective copyright holders.
           </p>
         </div>
       </div>
