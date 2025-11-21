@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { SentryService } from '@/lib/services/sentry';
+import { Context } from '@/lib/types/visionTypes';
 import { dataURLtoFile } from '@/lib/utils';
 
 export const useMain = () => {
@@ -14,7 +15,7 @@ export const useMain = () => {
     setGeneratedImage('');
   };
 
-  const generateImage = async (imagePreview: string, prompt: string) => {
+  const generateImage = async (imagePreview: string, prompt: string, context: Context | null) => {
     setIsLoading(true);
     setError('');
 
@@ -29,6 +30,7 @@ export const useMain = () => {
 
     formData.append('image', imageFile);
     formData.append('prompt', prompt);
+    formData.append('context', JSON.stringify(context));
 
     try {
       const response = await fetch('/api/image', {

@@ -15,3 +15,23 @@ export type Guidance = {
   centerDelta?: { dx: number; dy: number };
   scalePct?: number;
 };
+
+export type Context = {
+  framing: {
+    scalePct: number | undefined;
+    centered: boolean | undefined;
+  };
+  headTilt: {
+    rollDeg: number | undefined;
+  };
+  quality: {
+    brightness: number | undefined;
+    sharpness: number | undefined;
+  };
+  boxes: {
+    face: OverlayBox | undefined;
+    leftEye: OverlayBox | undefined;
+    rightEye: OverlayBox | undefined;
+    mouth: OverlayBox | undefined;
+  };
+};

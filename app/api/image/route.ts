@@ -2,9 +2,11 @@ import { GoogleGenAI, Part } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import type { Session } from 'next-auth';
 
+import { withValidatedImageRequest } from '@/lib/api/withValidatedImageRequest';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SentryService, withSentryUser } from '@/lib/services/sentry';
+import { buildImagePrompt } from '@/lib/utils/imagePrompt';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +14,15 @@ const client = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY!,
 });
 
-const postHandler = async (req: NextRequest, session: Session) => {
+const postHandler = async (
+  req: NextRequest,
+  session: Session,
+  validated: {
+    inlineImage: { inlineData: { data: string; mimeType: string } };
+    prompt: string;
+    context: string | null;
+  },
+) => {
   try {
     const user = await prisma.user.findUnique({ where: { email: session.user.email! } });
 
@@ -20,51 +30,11 @@ const postHandler = async (req: NextRequest, session: Session) => {
 
     if (process.env.NODE_ENV === 'production' && user.quota <= 0) {
       SentryService.captureMessage('User out of quota', { params: { route: 'api/image', method: 'POST' } });
+
       return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('image') as File | null;
-    const prompt = formData.get('prompt') as string | null;
-
-    if (!file || !prompt) {
-      SentryService.captureMessage('Missing image or prompt', { params: { route: 'api/image', method: 'POST' } });
-      return NextResponse.json({ error: 'Missing image or prompt' }, { status: 400 });
-    }
-
-    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
-    const mime = file.type || 'application/octet-stream';
-    if (!allowedTypes.has(mime)) {
-      return NextResponse.json({ error: 'Unsupported image type. Use PNG, JPEG or WEBP.' }, { status: 415 });
-    }
-
-    const MAX_SIZE = 8 * 1024 * 1024;
-    if (typeof file.size === 'number' && file.size > MAX_SIZE) {
-      return NextResponse.json({ error: 'Image too large (max 8MB).' }, { status: 413 });
-    }
-
-    const promptSafe = String(prompt).trim().slice(0, 200);
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const inlineImage = {
-      inlineData: {
-        data: buffer.toString('base64'),
-        mimeType: mime,
-      },
-    };
-
-    const [character, ...universe] = promptSafe.split(' ');
-
-    const text_prompt = `Transform the person in the photo so that they become the character: ${character}.
-
-Important instructions:
-1. **Transformation, not companionship**: The person in the photo should be transformed into the character. Do NOT place them next to the character in a scene.
-2. **Recognizable face**: Keep the essential facial features of the original person so they remain recognizable, if the character uses a mask, make without the mask.
-2. **Focus on the face and pose**: Keep the face in focus, if the character uses a mask, make without the mask, keep the pose of the original person.
-3. **Character style**: Adapt clothes, hair, body, and the background to reflect the universe and appearance of ${universe.join(' ')}.
-4. **Quality**: Generate a high-quality image, with cinematic lighting and realistic style.`.trim();
+    const text_prompt = buildImagePrompt(validated.prompt, validated.context);
 
     const result = await client.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -72,7 +42,7 @@ Important instructions:
         {
           role: 'user',
           parts: [
-            inlineImage,
+            validated.inlineImage,
             {
               text: text_prompt,
             },
@@ -107,4 +77,4 @@ Important instructions:
   }
 };
 
-export const POST = withSentryUser(requireAuth(postHandler));
+export const POST = withSentryUser(requireAuth(withValidatedImageRequest(postHandler)));

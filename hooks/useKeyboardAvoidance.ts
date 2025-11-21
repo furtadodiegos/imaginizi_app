@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export function useKeyboardAvoidance() {
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const [isIOS] = useState(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  });
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  useEffect(() => {
     if (!isIOS) {
       return;
     }
@@ -15,15 +19,27 @@ export function useKeyboardAvoidance() {
 
     const handleResize = () => {
       const viewportHeight = visualViewport.height;
-      // Set the CSS variable to the viewport height
       document.documentElement.style.setProperty('--viewport-height', `${viewportHeight}px`);
+
+      const newKeyboardHeight = window.innerHeight - viewportHeight;
+
+      if (newKeyboardHeight > 100) {
+        setKeyboardHeight(newKeyboardHeight);
+      } else {
+        setKeyboardHeight(0);
+      }
     };
 
     visualViewport.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
+    handleResize();
 
     return () => {
       visualViewport.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isIOS]);
+
+  return {
+    isIOS,
+    keyboardHeight,
+  };
 }

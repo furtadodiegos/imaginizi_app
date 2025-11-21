@@ -13,7 +13,7 @@ import AranhaPng from '../assets/aranha.png';
 import BuzzPng from '../assets/buzz.png';
 import FerroPng from '../assets/ferro.png';
 import GuPng from '../assets/gu.png';
-import LinesSvg from '../assets/lines.svg';
+import LinesSvg from '../assets/lines.png';
 import MauiPng from '../assets/maui.png';
 import MoanaPng from '../assets/moana.png';
 import ThinkingSvg from '../assets/thinking.svg';
@@ -46,14 +46,12 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
   const permissionState = cameraPermission || 'denied';
 
   return (
-    <section aria-labelledby="hero-section" className="relative flex flex-col h-screen w-screen">
-      <div
-        aria-labelledby="lines-svg"
-        className="absolute top-[-20px] right-[-40px] flex items-start justify-end w-full">
-        <LinesSvg />
+    <section aria-labelledby="hero-section" className="relative flex flex-col h-screen w-screen overflow-hidden">
+      <div aria-labelledby="lines-svg" className="flex items-start justify-end w-full">
+        <Image src={LinesSvg} alt="Lines" className="object-contain object-center" style={{ width: '100px' }} />
       </div>
 
-      <div className="absolute h-3/5 w-[700px] left-[-200px]">
+      <div className="absolute h-3/5 left-[-200px] top-[20px]">
         <Carousel
           plugins={[Autoplay({ delay: 2000, stopOnInteraction: true })]}
           opts={{
@@ -93,8 +91,9 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
       </div>
 
       <div
-        className="absolute h-[300px] w-[300px] bottom-[160px] right-[-130px]"
+        className="absolute h-[300px] w-[300px] bottom-[180px] right-0"
         style={{
+          transform: 'translateX(140px)',
           maskImage: burstSvgMask,
           maskSize: 'contain',
           maskRepeat: 'no-repeat',

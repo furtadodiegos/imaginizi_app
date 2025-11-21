@@ -1,6 +1,8 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import { GuidelineLevel } from '@/lib/types/visionTypes';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -31,4 +33,11 @@ export function dataURLtoFile(dataurl: string, filename: string): File | null {
   }
 
   return new File([u8arr], filename, { type: mime });
+}
+
+export function getOverlayColor(level?: GuidelineLevel) {
+  if (level === 'GOOD') return '#22c55e';
+  if (level === 'OK') return '#eab308';
+
+  return '#ef4444';
 }

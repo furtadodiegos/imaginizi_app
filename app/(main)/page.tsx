@@ -1,13 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { signIn /*, signOut, */, useSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useCallback, useEffect } from 'react';
 
 import { useMain } from '@/app/(main)/hooks';
 import { Overlay } from '@/components/Overlay';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCamera } from '@/hooks/useCamera';
+import { SentryService } from '@/lib/services/sentry';
 
 import { Footer, HeroBanner } from './components';
 
@@ -46,16 +47,15 @@ export default function Home() {
       onResetState();
       requestCamera();
     } catch (e) {
-      console.error('Error requesting camera:', e);
+      SentryService.captureException(e, { params: { path: 'page', method: 'onRequestCamera' } });
     }
   }, [requestCamera, onResetState, session]);
 
   useEffect(() => {
     if (cameraStreaming) {
       document.body.classList.add(OVERFLOW_HIDDEN);
-    } else {
-      document.body.classList.remove(OVERFLOW_HIDDEN);
-    }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else document.body.classList.remove(OVERFLOW_HIDDEN);
 
     return () => {
       document.body.classList.remove(OVERFLOW_HIDDEN);
@@ -63,7 +63,7 @@ export default function Home() {
   }, [cameraStreaming]);
 
   return (
-    <div className="relative w-full overflow-x-hidden">
+    <div className="relative w-full">
       <main className="flex min-h-svh flex-col bg-background text-foreground">
         <HeroBanner cameraPermission={cameraPermission} error={cameraError || error} openCamera={onRequestCamera} />
 
@@ -81,7 +81,7 @@ export default function Home() {
           generateImage={generateImage}
         />
 
-        {!cameraStreaming && <Footer />}
+        <Footer />
 
         <Overlay isVisible={cameraStreaming} />
       </main>

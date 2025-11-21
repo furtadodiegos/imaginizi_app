@@ -153,3 +153,56 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Animação de borda em loop */
+@keyframes border-bottom {
+  0% {
+    transform: scaleX(0);
+    transform-origin: bottom right;
+  }
+  25% {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+  }
+  100% {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+  }
+}
+
+.input-border-animation {
+  position: relative;
+}
+
+.input-border-animation .border-line {
+  position: absolute;
+  background-color: var(--primary);
+  pointer-events: none;
+}
+
+.input-border-animation .border-bottom {
+  height: 1.5px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  animation: border-bottom 3s ease-in-out infinite;
+}
+
+.input-border-animation:has(textarea:focus) .border-bottom {
+  animation-play-state: paused;
+}

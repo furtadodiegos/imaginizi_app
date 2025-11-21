@@ -6,11 +6,13 @@ type RouteContext = { params?: Record<string, string | string[]> } | undefined;
 type ExtraContext = Record<string, unknown> | RouteContext;
 
 export const captureException = (error: unknown, context?: ExtraContext) => {
-  Sentry.captureException(error, { extra: context });
+  if (process.env.NODE_ENV === 'development') console.error('Sentry error:', error, context);
+  else Sentry.captureException(error, { extra: context });
 };
 
 export const captureMessage = (message: string, context?: ExtraContext) => {
-  Sentry.captureMessage(message, { extra: context });
+  if (process.env.NODE_ENV === 'development') console.error('Sentry message:', message, context);
+  else Sentry.captureMessage(message, { extra: context });
 };
 
 export type SentryUserInput = {
@@ -61,8 +63,6 @@ export const withSentryUserCtx = <Params extends Record<string, string | string[
     }
   };
 };
-
-export const setSentryUser = setUser;
 
 export const SentryService = {
   captureException,
