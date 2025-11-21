@@ -1,103 +1,83 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
-import { useCamera } from "@/hooks/useCamera";
-import { useRef } from "react";
-import { useEffect } from "react";
+import dynamic from 'next/dynamic';
+import { signIn, useSession } from 'next-auth/react';
+import { useCallback, useEffect } from 'react';
+
+import { useMain } from '@/app/(main)/hooks';
+import { Overlay } from '@/components/Overlay';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCamera } from '@/hooks/useCamera';
+import { SentryService } from '@/lib/services/sentry';
+
+import { Footer, HeroBanner } from './components';
+
+const CameraView = dynamic(() => import('./components/CameraView'), {
+  ssr: false,
+  loading: () => <Skeleton className="w-full h-full animate-pulse absolute top-0" />,
+});
 
 export default function Home() {
+  const { data: session } = useSession();
+
+  const { error, isLoading, generatedImage, generateImage, onResetState } = useMain();
+
   const {
-    error,
+    cameraError,
     cameraPermission,
+    cameraStreaming,
     requestCamera,
     takePhoto,
     retakePhoto,
     imagePreview,
     videoRef,
     photoCanvasRef,
-    generateImage,
-    isLoading,
-    generatedImage,
+    closeCamera,
   } = useCamera();
-  console.log("🚀 ~ Home ~ cameraPermission:");
+
+  const onRequestCamera = useCallback(async () => {
+    try {
+      if (!session) {
+        await signIn('google');
+        return;
+      }
+
+      onResetState();
+      requestCamera();
+    } catch (e) {
+      SentryService.captureException(e, { params: { path: 'page', method: 'onRequestCamera' } });
+    }
+  }, [requestCamera, onResetState, session]);
+
+  useEffect(() => {
+    if (cameraStreaming) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [cameraStreaming]);
 
   return (
-    <div className="min-h-screen from-background to-muted flex flex-col items-center justify-center p-4">
-      <h1>Imaginizi</h1>
+    <div className="relative w-full">
+      <main className="flex min-h-svh flex-col bg-background text-foreground">
+        <HeroBanner cameraPermission={cameraPermission} error={cameraError || error} openCamera={onRequestCamera} />
 
-      {cameraPermission !== "granted" && (
-        <div className="flex gap-2 w-full max-w-md">
-          <Button
-            className="w-full"
-            variant="default"
-            disabled={cameraPermission === "denied"}
-            onClick={() => requestCamera()}
-          >
-            Open Camera
-          </Button>
-
-          {cameraPermission === "denied" && (
-            <p className="text-sm text-muted-foreground">
-              You blocked the camera access. Please enable it in your browser
-              settings.
-            </p>
-          )}
-        </div>
-      )}
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <div>
-        {!imagePreview && (
-          <div>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{
-                width: "100%",
-                maxWidth: "500px",
-              }}
-            />
-            <Button onClick={takePhoto}>Take Photo</Button>
-          </div>
-        )}
-
-        <canvas
-          ref={photoCanvasRef}
-          style={{ width: "100%", display: imagePreview ? "block" : "none" }}
+        <CameraView
+          videoRef={videoRef}
+          cameraStreaming={cameraStreaming}
+          error={error}
+          closeCamera={closeCamera}
+          takePhoto={takePhoto}
+          retakePhoto={retakePhoto}
+          isLoading={isLoading}
+          photoCanvasRef={photoCanvasRef}
+          imagePreview={imagePreview}
+          generatedImage={generatedImage}
+          generateImage={generateImage}
         />
 
-        {!!imagePreview && (
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Button onClick={retakePhoto}>Retake Photo</Button>
+        {!cameraStreaming && <Footer />}
 
-              <Button onClick={generateImage}>Generate Image</Button>
-            </div>
-
-            {isLoading && <Loader2 className="animate-spin" />}
-          </div>
-        )}
-
-        {generatedImage && (
-          <img
-            src={generatedImage}
-            alt="Generated"
-            width={500}
-            height={500}
-            className="object-cover"
-          />
-        )}
-      </div>
+        <Overlay isVisible={cameraStreaming} />
+      </main>
     </div>
   );
 }

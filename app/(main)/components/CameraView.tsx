@@ -1,0 +1,135 @@
+'use client';
+
+import { Loader2, RefreshCcw, X } from 'lucide-react';
+import Image from 'next/image';
+
+import { Overlay } from '@/components/Overlay';
+import { Button } from '@/components/ui/button';
+import { Context } from '@/lib/types/visionTypes';
+import { cn } from '@/lib/utils';
+
+import { useCameraView } from '../hooks';
+import { CameraForm } from './CameraForm';
+
+type CameraViewProps = {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  photoCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  cameraStreaming: boolean;
+  imagePreview: string;
+  generatedImage: string;
+  error: string;
+  isLoading: boolean;
+  closeCamera: () => void;
+  takePhoto: () => Promise<void>;
+  retakePhoto: () => void;
+  generateImage: (imagePreview: string, prompt: string, context: Context | null) => Promise<void>;
+};
+
+export default function CameraView({
+  videoRef,
+  photoCanvasRef,
+  cameraStreaming,
+  imagePreview,
+  generatedImage,
+  error,
+  isLoading,
+  closeCamera,
+  takePhoto,
+  retakePhoto,
+  generateImage,
+}: CameraViewProps) {
+  const { guidance, overlayRef, contextRef } = useCameraView({
+    videoRef,
+    cameraStreaming,
+    imagePreview,
+  });
+
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 z-11 h-screen w-screen transition-opacity duration-500 ease-in-out',
+        cameraStreaming ? 'opacity-100' : 'opacity-0 pointer-events-none',
+      )}>
+      <Button
+        className="absolute top-4 right-4 z-20 h-10 w-10 rounded-full p-2"
+        onClick={closeCamera}
+        aria-label="Close camera">
+        <X className="h-6 w-6" />
+      </Button>
+
+      {imagePreview && (
+        <Button
+          className="absolute top-16 right-4 z-20 h-10 w-10 rounded-full p-2"
+          onClick={retakePhoto}
+          aria-label="Retake photo">
+          <RefreshCcw className="h-6 w-6" />
+        </Button>
+      )}
+
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: imagePreview ? 'none' : 'block',
+        }}
+      />
+
+      <canvas
+        ref={overlayRef}
+        className={cn('absolute z-12 inset-0 w-full h-full object-cover top-0 left-0 pointer-events-none')}
+      />
+
+      <canvas
+        ref={photoCanvasRef}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: imagePreview ? 'block' : 'none' }}
+      />
+
+      <div
+        className={cn(
+          'absolute bottom-8 left-0 right-0 z-11 flex flex-col items-center justify-center gap-x-8',
+          imagePreview ? 'bottom-0 bg-black/90 backdrop-blur-sm' : 'bottom-8',
+        )}>
+        {imagePreview ? (
+          <>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <CameraForm onSubmit={(prompt) => generateImage(imagePreview, prompt, contextRef.current)} />
+          </>
+        ) : (
+          <div className="flex flex-col items-center">
+            {guidance?.text && <p className="text-white text-sm mb-3 text-center px-4 max-w-sm">{guidance.text}</p>}
+
+            <Button
+              onClick={takePhoto}
+              className={cn('h-16 w-16 rounded-full border-4 border-white bg-white/30 backdrop-blur-sm')}
+              aria-label="Take photo"
+            />
+          </div>
+        )}
+      </div>
+
+      <Overlay isVisible={isLoading || !!generatedImage} className="z-12 flex flex-col items-center justify-center">
+        {generatedImage ? (
+          <Image
+            src={generatedImage}
+            alt="Image Generated"
+            width={500}
+            height={500}
+            className="object-cover h-screen w-screen"
+          />
+        ) : (
+          <>
+            <Loader2 className="animate-spin text-white size-10" />
+
+            <p className="text-white text-sm">Generating image...</p>
+          </>
+        )}
+      </Overlay>
+    </div>
+  );
+}

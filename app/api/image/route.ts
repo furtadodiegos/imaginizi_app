@@ -1,156 +1,80 @@
-import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Part } from '@google/genai';
+import { NextRequest, NextResponse } from 'next/server';
+import type { Session } from 'next-auth';
 
-export const runtime = "nodejs"; // garante Node runtime (SDK pede Node 20+)
+import { withValidatedImageRequest } from '@/lib/api/withValidatedImageRequest';
+import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { SentryService, withSentryUser } from '@/lib/services/sentry';
+import { buildImagePrompt } from '@/lib/utils/imagePrompt';
+
+export const runtime = 'nodejs';
 
 const client = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY!,
 });
 
-export async function POST(req: NextRequest) {
+const postHandler = async (
+  req: NextRequest,
+  session: Session,
+  validated: {
+    inlineImage: { inlineData: { data: string; mimeType: string } };
+    prompt: string;
+    context: string | null;
+  },
+) => {
   try {
-    console.log(">>>", "POST", req.body);
+    const user = await prisma.user.findUnique({ where: { email: session.user.email! } });
 
-    const formData = await req.formData();
-    const file = formData.get("image") as File | null;
-    const prompt = formData.get("prompt") as string | null;
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (!file || !prompt) {
-      return NextResponse.json(
-        { error: "Faltou imagem ou prompt" },
-        { status: 400 }
-      );
+    if (user.quota <= 0) {
+      SentryService.captureMessage('User out of quota', { params: { route: 'api/image', method: 'POST' } });
+
+      return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
     }
 
-    // Lê a imagem enviada (binary -> base64)
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const text_prompt = buildImagePrompt(validated.prompt, validated.context);
 
-    const inlineImage = {
-      inlineData: {
-        data: buffer.toString("base64"),
-        mimeType: file.type || "image/png",
-      },
-    };
-
-    console.log(">>>", "1");
-    // Modelo de imagem do Gemini (Nano Banana / Flash Image)
-    // Ver docs: gemini-2.5-flash-image / imagem & edição. :contentReference[oaicite:2]{index=2}
     const result = await client.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: 'gemini-2.5-flash-image',
       contents: [
         {
-          role: "user",
+          role: 'user',
           parts: [
-            inlineImage,
+            validated.inlineImage,
             {
-              text: `
-Você recebeu uma foto de uma pessoa.
-A pessoa da foto quer ficar parecido com: ${prompt}.
-Mantenha o rosto reconhecível, estilo realista, iluminação bonita, foto com qualidade alta.
-Não mude traços principais do rosto, apenas roupa, cenário e estilo.
-              `.trim(),
+              text: text_prompt,
             },
           ],
         },
       ],
     });
 
-    console.log(">>>", "2");
-
     const candidate = result.candidates?.[0];
-    const partWithImage = candidate?.content?.parts?.find(
-      (p: any) => p.inlineData
-    ) as any;
+    const partWithImage = candidate?.content?.parts?.find((p: Part) => p.inlineData);
 
-    console.log(">>>", "3");
+    if (!partWithImage?.inlineData?.data) throw new Error('Gemini did not return image');
 
-    if (!partWithImage?.inlineData?.data) {
-      console.error(
-        "Nenhuma imagem retornada",
-        JSON.stringify(result, null, 2)
-      );
-      return NextResponse.json(
-        { error: "Gemini não retornou imagem" },
-        { status: 500 }
-      );
-    }
-
-    console.log(">>>", "4");
     const base64 = partWithImage.inlineData.data as string;
-    const mimeType = partWithImage.inlineData.mimeType || "image/png";
+    const mimeType = partWithImage.inlineData.mimeType || 'image/png';
 
-    console.log(">>>", "5");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        used: { increment: 1 },
+        quota: { decrement: 1 },
+      },
+    });
 
     return NextResponse.json({
       image: `data:${mimeType};base64,${base64}`,
     });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json(
-      { error: "Erro interno com o Gemini" },
-      { status: 500 }
-    );
-  }
-}
+    SentryService.captureException(e, { params: { route: 'api/image', method: 'POST' } });
 
-// >>> 2 {
-//   "sdkHttpResponse": {
-//     "headers": {
-//       "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
-//       "content-encoding": "gzip",
-//       "content-type": "application/json; charset=UTF-8",
-//       "date": "Sun, 09 Nov 2025 17:11:54 GMT",
-//       "server": "scaffolding on HTTPServer2",
-//       "server-timing": "gfet4t7; dur=12617",
-//       "transfer-encoding": "chunked",
-//       "vary": "Origin, X-Origin, Referer",
-//       "x-content-type-options": "nosniff",
-//       "x-frame-options": "SAMEORIGIN",
-//       "x-xss-protection": "0"
-//     }
-//   },
-//   "candidates": [
-//     {
-//       "content": {
-//         "parts": [
-//           {
-//             "text": "Com certeza! Aqui está você como Buzz Lightyear, mantendo o seu rosto reconhecível e com uma iluminação bonita e realista:\n\n"
-//           },
-//           {
-//             "inlineData": {
-//               "mimeType": "image/png",
-//               // "data": "iVBORw0KGgoAAAANSUhEUgAABKAAAANg"
-//             }
-//           }
-//         ],
-//         "role": "model"
-//       },
-//       "finishReason": "STOP",
-//       "index": 0
-//     }
-//   ],
-//   "modelVersion": "gemini-2.5-flash-image",
-//   "responseId": "WssQaaTPDprpz7IPmoG3qQ0",
-//   "usageMetadata": {
-//     "promptTokenCount": 323,
-//     "candidatesTokenCount": 1319,
-//     "totalTokenCount": 1642,
-//     "promptTokensDetails": [
-//       {
-//         "modality": "TEXT",
-//         "tokenCount": 65
-//       },
-//       {
-//         "modality": "IMAGE",
-//         "tokenCount": 258
-//       }
-//     ],
-//     "candidatesTokensDetails": [
-//       {
-//         "modality": "IMAGE",
-//         "tokenCount": 1290
-//       }
-//     ]
-//   }
-// }
+    return NextResponse.json({ error: `Internal error: ${(e as Error)?.message || 'Unknown'}` }, { status: 500 });
+  }
+};
+
+export const POST = withSentryUser(requireAuth(withValidatedImageRequest(postHandler)));
