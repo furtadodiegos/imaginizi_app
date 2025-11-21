@@ -17,8 +17,6 @@ const CameraView = dynamic(() => import('./components/CameraView'), {
   loading: () => <Skeleton className="w-full h-full animate-pulse absolute top-0" />,
 });
 
-const OVERFLOW_HIDDEN = 'overflow-hidden';
-
 export default function Home() {
   const { data: session } = useSession();
 
@@ -53,13 +51,8 @@ export default function Home() {
 
   useEffect(() => {
     if (cameraStreaming) {
-      document.body.classList.add(OVERFLOW_HIDDEN);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else document.body.classList.remove(OVERFLOW_HIDDEN);
-
-    return () => {
-      document.body.classList.remove(OVERFLOW_HIDDEN);
-    };
+    }
   }, [cameraStreaming]);
 
   return (
@@ -81,7 +74,7 @@ export default function Home() {
           generateImage={generateImage}
         />
 
-        <Footer />
+        {!cameraStreaming && <Footer />}
 
         <Overlay isVisible={cameraStreaming} />
       </main>

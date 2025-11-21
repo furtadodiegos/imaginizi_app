@@ -34,7 +34,7 @@ export const CameraForm: FC<CameraFormProps> = ({ onSubmit }) => {
               <Textarea
                 id="prompt"
                 className={cn(
-                  'text-start text-sm font-bold text-white/90 relative z-10 border-none focus-visible:border-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[36px]',
+                  'text-start text-base md:text-sm font-bold text-white/90 relative z-10 border-none focus-visible:border-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[36px]',
                 )}
                 placeholder={`I want to be Buzz Lightyear from Toy Story 4`}
                 required
