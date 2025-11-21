@@ -28,7 +28,7 @@ const postHandler = async (
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (process.env.NODE_ENV === 'production' && user.quota <= 0) {
+    if (user.quota <= 0) {
       SentryService.captureMessage('User out of quota', { params: { route: 'api/image', method: 'POST' } });
 
       return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
