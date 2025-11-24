@@ -22,7 +22,7 @@ type HandlerWithValidatedImage = (
   validated: ValidatedImageRequest,
 ) => Promise<NextResponse> | NextResponse;
 
-export function withValidatedImageRequest(handler: HandlerWithValidatedImage) {
+export function withValidatedImageFieldsRequest(handler: HandlerWithValidatedImage) {
   return async (req: NextRequest, session: Session): Promise<NextResponse> => {
     try {
       const formData = await req.formData();

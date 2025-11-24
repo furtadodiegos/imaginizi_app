@@ -2,11 +2,11 @@ import { GoogleGenAI, Part } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import type { Session } from 'next-auth';
 
-import { withValidatedImageRequest } from '@/lib/api/withValidatedImageRequest';
+import { withValidatedImageFieldsRequest } from '@/lib/api/withValidatedImageFieldsRequest';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SentryService, withSentryUser } from '@/lib/services/sentry';
-import { buildImagePrompt } from '@/lib/utils/imagePrompt';
+import { generateContextBlock, imageGenerationConfig } from '@/lib/utils/imagePrompt';
 
 export const runtime = 'nodejs';
 
@@ -34,21 +34,21 @@ const postHandler = async (
       return NextResponse.json({ error: 'User out of quota' }, { status: 403 });
     }
 
-    const text_prompt = buildImagePrompt(validated.prompt, validated.context);
+    const contextBlock = generateContextBlock(validated.context);
 
     const result = await client.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [
         {
-          role: 'user',
+          role: 'user' as const,
           parts: [
             validated.inlineImage,
-            {
-              text: text_prompt,
-            },
+            { text: `CHARACTER_PROMPT: ${String(validated.prompt).trim().slice(0, 100)}` },
+            { text: contextBlock },
           ],
         },
       ],
+      config: imageGenerationConfig,
     });
 
     const candidate = result.candidates?.[0];
@@ -77,4 +77,4 @@ const postHandler = async (
   }
 };
 
-export const POST = withSentryUser(requireAuth(withValidatedImageRequest(postHandler)));
+export const POST = withSentryUser(requireAuth(withValidatedImageFieldsRequest(postHandler)));

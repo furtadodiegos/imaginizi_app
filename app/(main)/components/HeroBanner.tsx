@@ -9,15 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { PermissionState } from '@/hooks/useCamera';
 
-import AranhaPng from '../assets/aranha.png';
-import BuzzPng from '../assets/buzz.png';
-import FerroPng from '../assets/ferro.png';
 import GuPng from '../assets/gu.png';
+import AranhaPng from '../assets/IMG0.png';
 import LinesSvg from '../assets/lines.png';
-import MauiPng from '../assets/maui.png';
-import MoanaPng from '../assets/moana.png';
 import ThinkingSvg from '../assets/thinking.svg';
-import WoodyPng from '../assets/woody.png';
 
 type HeroBannerProps = {
   openCamera: () => void;
@@ -25,14 +20,7 @@ type HeroBannerProps = {
   error?: string;
 };
 
-const images = [
-  { src: AranhaPng, alt: 'Spider-Man' },
-  { src: MoanaPng, alt: 'Moana' },
-  { src: WoodyPng, alt: 'Woody' },
-  { src: BuzzPng, alt: 'Buzz Lightyear' },
-  { src: MauiPng, alt: 'Maui' },
-  { src: FerroPng, alt: 'Iron Man' },
-];
+const images = [{ src: AranhaPng, alt: 'Spider-Man' }];
 
 const svgMaskForCarousel = `url("data:image/svg+xml,${encodeURIComponent(
   `<svg viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg"><path d="M100 170 C 75 165, 45 145, 30 120 C 10 85, 20 45, 50 30 C 70 20, 90 25, 100 40 C 110 25, 130 20, 150 30 C 180 45, 190 85, 170 120 C 155 145, 125 165, 100 170 C 90 172, 80 175, 70 175 C 80 182, 90 185, 100 185 C 110 185, 120 182, 130 175" fill="black"/></svg>`,
@@ -78,7 +66,7 @@ export const HeroBanner: FC<HeroBannerProps> = ({ openCamera, cameraPermission, 
                     alt={image.alt}
                     width={600}
                     height={600}
-                    className="h-full w-full object-cover"
+                    className="h-[600px] w-[600px] object-cover translate-y-17"
                     priority={index === 0}
                   />
                 </div>
